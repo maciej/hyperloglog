@@ -8,6 +8,7 @@ import (
 	"math/rand"
 	"reflect"
 	"testing"
+	"time"
 
 	"github.com/davecgh/go-spew/spew"
 )
@@ -810,6 +811,27 @@ func Benchmark_Size_New_Sparse(b *testing.B) {
 		sk, _ = newSketch(16, true)
 	}
 	_ = sk
+}
+
+func Benchmark_Size(b *testing.B) {
+	rand.Seed(time.Now().UnixNano())
+	data := make([]byte, 8*256)
+	rand.Read(data)
+
+	cards := []int{1, 2, 5, 10, 100, 200, 256}
+
+	for _, card := range cards {
+		b.Run(fmt.Sprintf("cardinality %d", card), func(b *testing.B) {
+			for i := 0; i < b.N; i++ {
+				sk, _ := newSketch(14, true)
+				for j := 0; j < card; j++ {
+					sk.Insert(data[8*j : 8*j+7])
+				}
+				sk.mergeSparse() // Force cleaning of tmpSet
+				b.ReportMetric(float64(len(sk.sparseList.b)), "bytes")
+			}
+		})
+	}
 }
 
 func Benchmark_Add_100(b *testing.B) {
